@@ -1,0 +1,35 @@
+---
+- name: update all aws packages
+  yum: name=aws* state=latest
+
+- name: set sysctl ip_forwarding
+  sysctl: name=net.ipv4.ip_forward value=1 state=present ignoreerrors=yes
+
+- name: set sysctl send_redirects
+  sysctl: name=net.ipv4.conf.eth0.send_redirects value=0 state=present ignoreerrors=yes
+
+- name: check if iptables is set
+  shell: /sbin/iptables -t nat -C POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE
+  register: shell_out_rule_exists
+  ignore_errors: yes
+
+- name: set iptables outbound nat masquerading
+  shell: /sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE
+  when: shell_out_rule_exists.rc != 0
+  register: shell_out_create_rule
+
+- name: save iptables
+  shell: /sbin/iptables-save > /etc/sysconfig/iptables
+  when: shell_out_create_rule | changed
+
+- name: ensure /opt/nat_monitor exists
+  file: path=/opt/nat_monitor state=directory
+
+- name: set the nat_monitor script 
+  template: src=nat_monitor.sh.j2 dest=/opt/nat_monitor/nat_monitor.sh mode=755
+
+- name: set the init script
+  template: src=nat_monitor.j2 dest=/etc/init.d/nat_monitor mode=755
+
+- name: ensure the service is started and enabled at boot
+  service: name=nat_monitor state=running enabled=True

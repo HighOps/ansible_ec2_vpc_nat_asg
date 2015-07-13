@@ -1,0 +1,16 @@
+#!/bin/bash
+
+cat > /root/nat_configs.txt <<EOF
+{% for item in subnet_route_map %}
+{{ item[0] }},{{ item[1]['subnet_id'] }},{{ item[1]['route_table_id'] }}
+{% endfor %}
+EOF
+
+# make sure nat settings are in place
+iptables -t nat -A POSTROUTING -j MASQUERADE
+iptables -A FORWARD -j ACCEPT
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+curl -sL https://raw.githubusercontent.com/wrapp/ec2-nat-failover/master/nat_monitor.py > /root/nat_monitor.py
+python -u /root/nat_monitor.py < /root/nat_configs.txt | logger -t nat_monitor
+

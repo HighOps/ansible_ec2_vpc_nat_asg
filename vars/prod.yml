@@ -1,0 +1,120 @@
+---
+# prod Environment
+
+region: us-east-1
+env: prod
+
+nat_eipalloc_list:
+  - eipalloc-abcdefgh
+  - eipalloc-abcdefgh
+
+az_1: "us-east-1d"
+az_2: "us-east-1e"
+
+key_name: 'prod_key'
+
+vpc:
+  name: "{{ env }}"
+  cidr_block: 10.30.0.0/16
+  tags:
+    Environment: "{{ env }}"
+  subnets:
+    - cidr: 10.30.0.0/23
+      az: "{{ az_1 }}"
+      resource_tags: 
+        Name: "{{ env + '_public_0' }}"
+        Environment: "{{ env }}"
+        Type: "public"
+    - cidr: 10.30.2.0/23
+      az: "{{ az_2 }}"
+      resource_tags: 
+        Name: "{{ env + '_public_1' }}"
+        Environment: "{{ env }}"
+        Type: "public"
+    - cidr: 10.30.100.0/23
+      az: "{{ az_1 }}"
+      resource_tags: 
+        Name: "{{ env + '_private_0' }}"
+        Environment: "{{ env }}"
+        Type: "private"
+    - cidr: 10.30.102.0/23
+      az: "{{ az_2 }}"
+      resource_tags:
+        Name: "{{ env + '_private_1' }}"
+        Environment: "{{ env }}"
+        Type: "private"
+  route_tables:
+    igw:
+      - resource_tags:
+          Name: "{{ env + '_public' }}"
+          Environment: "{{ env }}"
+        subnets:
+          - "10.30.0.0/23"
+          - "10.30.2.0/23"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: igw 
+    private:
+      - resource_tags:
+          Name: "{{ env + '_private_0' }}"
+          Environment: "{{ env }}"
+        subnets:
+          - "{{ env + '_private_0' }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: igw 
+      - resource_tags:
+          Name: "{{ env + '_private_1' }}"
+          Environment: "{{ env }}"
+        subnets:
+          - "{{ env + '_private_1' }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: igw 
+
+sg_list:
+  - name: "{{ env + '_nat' }}"
+    description: allow outbound nat
+    rules:
+      - proto: all
+        cidr_ip: 10.30.0.0/16
+    rules_egress:
+      - proto: all
+        cidr_ip: 0.0.0.0/0
+  - name: "{{ env + '_bastion' }}"
+    description: access bastion, allow outbound nat
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0 
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: 0.0.0.0/0 
+    rules_egress:
+      - proto: all
+        cidr_ip: 0.0.0.0/0
+
+nat_asg_lc:
+  name: "{{ env + '_nat_asg_lc' }}"
+  image_id: ami-303b1458
+  security_group: "{{ env + '_nat' }}"
+  instance_type: t2.small
+  key_name: "{{ key_name ]]"
+  instance_profile_name: "{{ env + '_NAT_Monitor' }}"
+
+nat_asg:
+  name: "{{ env + '_nat_asg' }}"
+  launch_config_name: "{{ env + '_nat_asg_lc' }}"
+  replace_all_instances: yes
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  availability_zones: 
+    - "{{ az_1 }}"
+    - "{{ az_2 }}"
+  tags:
+    - Name: "{{ env + '_nat' }}"
+    - Environment: "{{ env }}"
+

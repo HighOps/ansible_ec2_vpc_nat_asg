@@ -1,0 +1,111 @@
+---
+- name: bootstrap the vpc
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+
+    - name: check that env was passed in extra-vars
+      assert:
+        that: 'env is defined'
+
+    - include_vars: "{{ inventory_dir }}/vars/{{ env }}.yml"
+
+    - name: create the VPC
+      ec2_vpc_net:
+        cidr_block: "{{ vpc.cidr_block }}"
+        name: "{{ env }}"
+        region: "{{ region }}"
+        state: present
+        tags: "{{ vpc.tags }}"
+      register: ec2_vpc_net_out
+
+    - name: create the VPC subnets
+      ec2_vpc_subnet:
+        az: "{{ item.az }}"
+        cidr: "{{ item.cidr }}"
+        region: "{{ region }}"
+        resource_tags: "{{ item.resource_tags }}"
+        state: present
+        vpc_id: "{{ ec2_vpc_net_out.vpc.id }}"
+      with_items: vpc.subnets 
+      register: ec2_vpc_subnet_out
+
+    - name: create the VPC internet gateway
+      ec2_vpc_igw:
+        region: "{{ region }}"
+        state: present
+        vpc_id: "{{ ec2_vpc_net_out.vpc.id }}"
+      register: ec2_vpc_igw_out 
+
+    - name: create the igw route table
+      ec2_vpc_route_table:
+        region: "{{ region }}"
+        resource_tags: "{{ item.resource_tags }}"
+        routes: "{{ item.routes }}"
+        subnets: "{{ item.subnets }}"
+        vpc_id: "{{ ec2_vpc_net_out.vpc.id }}"
+      with_items: vpc.route_tables.igw
+      register: ec2_vpc_route_table_igw_out
+ 
+    - name: create the private route tables
+      ec2_vpc_route_table:
+        region: "{{ region }}"
+        resource_tags: "{{ item.resource_tags }}"
+        routes: "{{ item.routes }}"
+        subnets: "{{ item.subnets }}"
+        vpc_id: "{{ ec2_vpc_net_out.vpc.id }}"
+      with_items: vpc.route_tables.private
+      register: ec2_vpc_route_table_private_out
+      ignore_errors: yes
+ 
+    - name: process security groups
+      ec2_group:
+        description: "{{ item.description }}"
+        name: "{{ item.name }}"
+        region: "{{ region }}"
+        rules: "{{ item.rules }}"
+        rules_egress: "{{ item.rules_egress }}"
+        state: present
+        vpc_id: "{{ ec2_vpc_net_out.vpc.id }}"
+      with_items: sg_list
+      register: ec2_group_out
+
+    - name: get a list of public subnet-id,route-id maps
+      set_fact:
+        subnet_route_map: "{{ ec2_vpc_subnet_out.results | get_subnet_route_map(ec2_vpc_route_table_private_out.results) }}"
+    - name: merge the eip allocated list with the subnet-id,route-id map list
+      set_fact:
+        subnet_route_map: "{{ nat_eipalloc_list | get_zip(subnet_route_map) }}"
+
+    - name: create the nat auto scaling group launch configuration
+      ec2_lc:
+        region: "{{ region }}"
+        name: "{{ nat_asg_lc.name }}"
+        image_id: "{{ nat_asg_lc.image_id }}" 
+        security_groups: "{{ ec2_group_out.results | get_security_groups('name', nat_asg_lc.security_group) }}"
+        instance_type: "{{ nat_asg_lc.instance_type }}"
+        user_data: |
+          {{ lookup('template', './bootstrap_vpc_user_data.j2') }}
+        key_name: "{{ nat_asg_lc.key_name }}"
+        instance_profile_name: "{{ nat_asg_lc.instance_profile_name }}"
+        assign_public_ip: yes
+      register: ec2_lc_out
+      when: nat_asg_lc is defined
+
+    - name: launch the nat auto scaling group
+      ec2_asg:
+        region: "{{ region }}"
+        name: "{{ nat_asg.name }}"
+        launch_config_name: "{{ nat_asg.launch_config_name }}"
+        replace_all_instances: "{{ nat_asg.replace_all_instances }}"
+        desired_capacity: "{{ nat_asg.desired_capacity }}"
+        min_size: "{{ nat_asg.min_size }}"
+        max_size: "{{ nat_asg.max_size }}"
+        vpc_zone_identifier: "{{ ec2_vpc_subnet_out.results | get_subnets('Type', 'public') }}"
+        availability_zones: "{{ nat_asg.availability_zones }}"
+        wait_for_instances: yes
+        tags: "{{ nat_asg.tags }}"
+      register: ec2_asg_out
+      when: nat_asg is defined and ec2_lc_out is defined
+   
