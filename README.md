@@ -24,7 +24,8 @@ At present, it includes
 Because it's using brand new VPC modules, _which are only currently available as Pull Requests (PRs)!_, the following is required
 
 ```
-cd git
+cd ~
+mkdir git ; cd git
 git clone git@github.com:ansible/ansible.git
 git clone git@github.com:ansible/ansible-modules-core.git
 git clone git@github.com:ansible/ansible-modules-extras.git
@@ -56,7 +57,7 @@ Review and create/modify a variable file, see ```vars/``` for existing examples.
 
 Once you are happy with your var file, run it, e.g.
 
-    ansible-playbook plays/bootstrap_vpc.yml --extra-vars "env=prod"
+    ansible-playbook plays/operation/bootstrap_vpc.yml --extra-vars "env=prod"
 
 ## Issues
 
