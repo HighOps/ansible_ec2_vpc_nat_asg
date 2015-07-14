@@ -48,8 +48,33 @@ Then update the ansible.cfg library param to include the path to the ansible-mod
 
 - an ec2 keypair, set in the nat auto scaling launch configuration
 - a pair of allocated (but not associated) EIPs
-- an IAM role and policy, used by the nat instances to allocate EIPs and take over routes
-
+- an IAM role and policy, used by the nat instances to allocate EIPs and take over routes, e.g.
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "prodNATMonitorInstanceAccess",
+            "Action": [
+                "ec2:AssociateAddress",
+                "ec2:CreateRoute",
+                "ec2:DescribeInstances",
+                "ec2:DescribeRouteTables",
+                "ec2:ModifyInstanceAttribute",
+                "ec2:ReplaceRoute"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "ForAllValues:StringLike": {
+                    "ec2:ResourceTag/Environment": "prod*",
+                    "ec2:ResourceTag/Role": "nat*"
+                }
+            }
+        }
+    ]
+}
+```
 
 ## Usage
 

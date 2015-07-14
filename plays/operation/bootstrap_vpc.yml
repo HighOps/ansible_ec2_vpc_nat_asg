@@ -93,6 +93,8 @@
       register: ec2_lc_out
       when: nat_asg_lc is defined
 
+    - debug: var=ec2_lc_out
+
     - name: launch the nat auto scaling group
       ec2_asg:
         region: "{{ region }}"
@@ -108,4 +110,21 @@
         tags: "{{ nat_asg.tags }}"
       register: ec2_asg_out
       when: nat_asg is defined and ec2_lc_out is defined
-   
+  
+    - name: launch a bastion box
+      ec2:
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        instance_type: "t2.micro"
+        image: ami-1ecae776
+        wait: yes
+        group: "{{ env + '_bastion' }}"
+        instance_tags:
+          Name: "{{ env + '_bastion' }}"
+          Environment: "{{ env }}"
+        exact_count: 1
+        count_tag: 
+          Name: "{{ env + '_bastion' }}"
+          Environment: "{{ env }}"
+        vpc_subnet_id: "{{ ec2_vpc_subnet_out.results | get_subnets('Type', 'public') | first }}"  
+        assign_public_ip: yes
