@@ -44,7 +44,7 @@ git merge ec2_vpc_subnet
 ```
 Then update the ansible.cfg library param to include the path to the ansible-modules-core and ansible-modules-extras directories.
 
-## Dependencies
+## Pre-reqs
 
 - an ec2 keypair, set in the nat auto scaling launch configuration
 - a pair of allocated (but not associated) EIPs

@@ -5,13 +5,13 @@ region: us-east-1
 env: prod
 
 nat_eipalloc_list:
-  - eipalloc-abcdefgh
-  - eipalloc-abcdefgh
+  - eipalloc-e35b0486
+  - eipalloc-e05b0485
 
 az_1: "us-east-1d"
 az_2: "us-east-1e"
 
-key_name: 'prod_key'
+key_name: "prod_key"
 
 vpc:
   name: "{{ env }}"
@@ -101,8 +101,8 @@ nat_asg_lc:
   image_id: ami-303b1458
   security_group: "{{ env + '_nat' }}"
   instance_type: t2.small
-  key_name: "{{ key_name ]]"
-  instance_profile_name: "{{ env + '_NAT_Monitor' }}"
+  key_name: "{{ key_name }}"
+  instance_profile_name: "{{ env + 'NATMonitor' }}"
 
 nat_asg:
   name: "{{ env + '_nat_asg' }}"

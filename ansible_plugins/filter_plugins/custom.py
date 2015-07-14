@@ -1,18 +1,18 @@
 from jinja2.utils import soft_unicode
 
-def get_security_groups(value, key, value, return_key='group_id'):
+def get_security_groups(value, match_key, match_value, return_key='group_id'):
     # 'value' input is expected to be a results list from the ec2_group module
     # it looks for a key, e.g. 'name' and a value, e.g. 'prod_nat' and returns 
     # the return_key, e.g. 'group_id' of all that match in a list
     results = []
     for item in value:
-      if key in item['item'].keys():
-        if item['item'][key] == value:
+      if match_key in item['item'].keys():
+        if item['item'][match_key] == match_value:
           results.append(item[return_key])
 
     return results
 
-def get_subnet_route_map(value, routes, key='Type', value='public'):
+def get_subnet_route_map(value, routes, tag_key='Type', tag_value='public'):
     # given a list of subnet results from the ec2_vpc_subnet task and a list 
     # of route results from the ec2_vpc_route_table task, return a list of 
     # dicts of public subnet_id : route_id mapping where the public subnet 
@@ -45,7 +45,7 @@ def get_subnet_route_map(value, routes, key='Type', value='public'):
     # get a mapping of key (public) subnets to az
     subnet_az_map = {}
     for s in value:
-        if s['subnet']['tags'][key] == value:
+        if s['subnet']['tags'][tag_key] == tag_value:
             subnet_az_map[s['subnet_id']] = s['subnet']['az']
 
     # now loop through the route:az's, and find a matching public subnet based on az
@@ -55,6 +55,16 @@ def get_subnet_route_map(value, routes, key='Type', value='public'):
                 mapping.append({'subnet_id':subnet_id, 'route_table_id':route_table_id })
 
     return mapping
+
+def get_subnets(value, tag_key, tag_value, return_type='subnet_id'):
+    # return all subnets that match
+    subnets = []
+    for item in value:
+      for key, value in item['subnet']['tags'].iteritems():
+        if key == tag_key and value == tag_value:
+          subnets.append(item[return_type])
+
+    return subnets
 
 def get_zip(value, list1):
     # return zipped result of 2 lists
@@ -67,5 +77,6 @@ class FilterModule(object):
         return {
             'get_security_groups': get_security_groups,
             'get_subnet_route_map': get_subnet_route_map,
+            'get_subnets': get_subnets,
             'get_zip': get_zip,
         }
