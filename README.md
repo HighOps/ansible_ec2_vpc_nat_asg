@@ -6,7 +6,7 @@
 
 The playbook and example var file will create a 2 tiered AWS ec2 VPC using multiple Availability Zones (AZs). In order for the private instances to access the internet, it uses NAT instances and manages these through an auto scaling group.   
 
-![Image of VPC](https://github.com/halberom/ansible_ec2_vpc_nat_asg/images/VPC.png)
+![Image of VPC](https://github.com/halberom/ansible_ec2_vpc_nat_asg/blob/master/images/VPC.png)
 
 When the NAT instances start, they associate themselves with an EIP (so any outbound traffic comes from a known source) and, based on what subnet they're in, attempt to replace the route.  They use https://github.com/wrapp/ec2-nat-failover to do this.
 
