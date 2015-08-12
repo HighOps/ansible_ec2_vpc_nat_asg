@@ -1,17 +1,26 @@
 ---
-# prod Environment
+###############################################################################
+# Edit the following variables to suit
 
-region: us-east-1
 env: prod
 
-nat_eipalloc_list:
-  - eipalloc-e35b0486
-  - eipalloc-e05b0485
-
+region: us-east-1
 az_1: "us-east-1d"
 az_2: "us-east-1e"
 
 key_name: "prod_key"
+
+nat_ami: ami-303b1458
+nat_eipalloc_list:
+  - eipalloc-e35b0486
+  - eipalloc-e05b0485
+nat_instance_type: t2.small
+
+bastion_ami: ami-1ecae776
+bastion_instance_type: t2.micro
+
+###############################################################################
+# Be careful editing anything below
 
 vpc:
   name: "{{ env }}"
@@ -98,9 +107,9 @@ sg_list:
 
 nat_asg_lc:
   name: "{{ env + '_nat_asg_lc' }}"
-  image_id: ami-303b1458
+  image_id: "{{ nat_ami }}"
   security_group: "{{ env + '_nat' }}"
-  instance_type: t2.small
+  instance_type: "{{ nat_instance_type }}"
   key_name: "{{ key_name }}"
   instance_profile_name: "{{ env + 'NATMonitor' }}"
 
