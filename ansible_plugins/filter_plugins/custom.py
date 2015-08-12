@@ -34,11 +34,11 @@ def get_subnet_route_map(value, routes, tag_key='Type', tag_value='public'):
                     subnet_in_route = True
             elif s['subnet']['cidr'] in r['item']['subnets']:
                 subnet_in_route = True
-            elif s['subnet_id'] in r['item']['subnets']:
+            elif s['subnet']['id'] in r['item']['subnets']:
                 subnet_in_route = True
 
             if subnet_in_route: 
-                route_az_map[r['route_table_id']] = s['subnet']['az']
+                route_az_map[r['route_table_id']] = s['subnet']['availability_zone']
 
     # assume a distinguishing tag exists
 
@@ -46,7 +46,7 @@ def get_subnet_route_map(value, routes, tag_key='Type', tag_value='public'):
     subnet_az_map = {}
     for s in value:
         if s['subnet']['tags'][tag_key] == tag_value:
-            subnet_az_map[s['subnet_id']] = s['subnet']['az']
+            subnet_az_map[s['subnet']['id']] = s['subnet']['availability_zone']
 
     # now loop through the route:az's, and find a matching public subnet based on az
     for route_table_id,route_az in route_az_map.iteritems():
@@ -62,7 +62,7 @@ def get_subnets(value, tag_key, tag_value, return_type='subnet_id'):
     for item in value:
       for key, value in item['subnet']['tags'].iteritems():
         if key == tag_key and value == tag_value:
-          subnets.append(item[return_type])
+          subnets.append(item['subnet']['id'])
 
     return subnets
 
