@@ -115,8 +115,8 @@
       ec2:
         region: "{{ region }}"
         key_name: "{{ key_name }}"
-        instance_type: "t2.micro"
-        image: ami-1ecae776
+        instance_type: "{{ bastion_instance_type }}"
+        image: "{{ bastion_ami }}"
         wait: yes
         group: "{{ env + '_bastion' }}"
         instance_tags:
